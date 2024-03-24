@@ -25,6 +25,12 @@ import java.util.Random;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.nio.charset.Charset;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 class WebServer {
   public static void main(String args[]) {
@@ -193,63 +199,108 @@ class WebServer {
             builder.append("\n");
             builder.append("File not found: " + file);
           }
-        } else if (request.contains("multiply?")) {
-          // This multiplies two numbers, there is NO error handling, so when
-          // wrong data is given this just crashes
-
-          Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-          // extract path parameters
-          query_pairs = splitQuery(request.replace("multiply?", ""));
-
-          // extract required fields from parameters
-          Integer num1 = Integer.parseInt(query_pairs.get("num1"));
-          Integer num2 = Integer.parseInt(query_pairs.get("num2"));
-
-          // do math
-          Integer result = num1 * num2;
-
-          // Generate response
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Result is: " + result);
-
-          // TODO: Include error handling here with a correct error code and
-          // a response that makes sense
-
-        } else if (request.contains("github?")) {
-          // pulls the query from the request and runs it with GitHub's REST API
-          // check out https://docs.github.com/rest/reference/
-          //
-          // HINT: REST is organized by nesting topics. Figure out the biggest one first,
-          //     then drill down to what you care about
-          // "Owner's repo is named RepoName. Example: find RepoName's contributors" translates to
-          //     "/repos/OWNERNAME/REPONAME/contributors"
-
-          Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-          query_pairs = splitQuery(request.replace("github?", ""));
-          String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
-          System.out.println(json);
-
-          builder.append("HTTP/1.1 200 OK\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("Check the todos mentioned in the Java source file");
-          // TODO: Parse the JSON returned by your fetch and create an appropriate
-          // response based on what the assignment document asks for
-
+        } else if (request.startsWith("multiply")) {
+    // Check if the request contains query parameters
+    int questionMarkIndex = request.indexOf("?");
+    if (questionMarkIndex == -1) {
+        // No query parameters present
+        builder.append("HTTP/1.1 400 Bad Request\n");
+        builder.append("Content-Type: text/html; charset=utf-8\n");
+        builder.append("\n");
+        builder.append("Error: No query parameters provided for multiplication");
+    } else {
+        // Extract query parameters
+        Map<String, String> query_pairs = splitQuery(request.substring(questionMarkIndex + 1));
+        
+        // Check if both parameters are missing
+        if (!query_pairs.containsKey("num1") || !query_pairs.containsKey("num2")) {
+            builder.append("HTTP/1.1 400 Bad Request\n");
+            builder.append("Content-Type: text/html; charset=utf-8\n");
+            builder.append("\n");
+            builder.append("Error: Missing query parameters 'num1' and/or 'num2'");
         } else {
-          // if the request is not recognized at all
+            String num1Str = query_pairs.get("num1");
+            String num2Str = query_pairs.get("num2");
 
-          builder.append("HTTP/1.1 400 Bad Request\n");
-          builder.append("Content-Type: text/html; charset=utf-8\n");
-          builder.append("\n");
-          builder.append("I am not sure what you want me to do...");
+            try {
+                // Parse query parameters to integers
+                int num1 = Integer.parseInt(num1Str);
+                int num2 = Integer.parseInt(num2Str);
+                
+                // Perform multiplication
+                int result = num1 * num2;
+
+                // Generate response
+                builder.append("HTTP/1.1 200 OK\n");
+                builder.append("Content-Type: text/html; charset=utf-8\n");
+                builder.append("\n");
+                builder.append("Result is: ").append(result);
+            } catch (NumberFormatException e) {
+                // Handle invalid number format
+                builder.append("HTTP/1.1 400 Bad Request\n");
+                builder.append("Content-Type: text/html; charset=utf-8\n");
+                builder.append("\n");
+                builder.append("Error: Invalid number format");
+            }
         }
+    }
+}
+        
+        
+if (request.contains("github?")) {
+        	
+        	
+            Map<String, String> queryPairs = splitQuery(request.replace("github?", ""));
+            if (queryPairs.containsKey("query") && !queryPairs.get("query").isEmpty()) {
+            	
+                String githubQuery = queryPairs.get("query");
+                try {
+                    // Fetch data from the GitHub API
+                    String json = fetchURL("https://api.github.com/" + githubQuery);
 
-        // Output
-        response = builder.toString().getBytes();
-      }
+                    // Parse the JSON response
+                    JSONArray repositories = new JSONArray(json);
+
+                    // Build the response containing repository information
+                    StringBuilder responseBuilder = new StringBuilder();
+                    responseBuilder.append("HTTP/1.1 200 OK\n");
+                    responseBuilder.append("Content-Type: text/html; charset=utf-8\n");
+                    responseBuilder.append("\n");
+
+                    // Iterate over each repository and extract required information
+                    for (int i = 0; i < repositories.length(); i++) {
+                        JSONObject repo = repositories.getJSONObject(i);
+                        String fullName = repo.getString("full_name");
+                        int id = repo.getInt("id");
+                        String ownerLogin = repo.getJSONObject("owner").getString("login");
+
+                        // Append repository information to the response
+                        responseBuilder.append("Repository Full Name: ").append(fullName).append("<br>");
+                        responseBuilder.append("Repository ID: ").append(id).append("<br>");
+                        responseBuilder.append("Owner's Login: ").append(ownerLogin).append("<br><br>");
+                    }
+
+                    // Set the response
+                    response = responseBuilder.toString().getBytes();
+                } catch (JSONException e) {
+                    // Handle JSON parsing exceptions
+                    e.printStackTrace();
+                    response = ("<html>ERROR: " + e.getMessage() + "</html>").getBytes();
+                } 
+                
+            }  
+            } else {
+                // Handle missing or empty 'query' parameter
+                StringBuilder responseBuilder = new StringBuilder();
+                responseBuilder.append("HTTP/1.1 400 Bad Request\n");
+                responseBuilder.append("Content-Type: text/html; charset=utf-8\n");
+                responseBuilder.append("\n");
+                responseBuilder.append("Missing or empty 'query' parameter in the request.");
+                response = responseBuilder.toString().getBytes();
+            }
+        }
+        
+        
     } catch (IOException e) {
       e.printStackTrace();
       response = ("<html>ERROR: " + e.getMessage() + "</html>").getBytes();
