@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.format.DateTimeParseException;
 
 
 class WebServer {
@@ -203,98 +204,195 @@ class WebServer {
 	            builder.append("File not found: " + file);
 	          }
 	        } else if (request.contains("multiply?")) {
-	          // This multiplies two numbers, there is NO error handling, so when
-	          // wrong data is given this just crashes
+	            try {
+	                Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+	             
+	                query_pairs = splitQuery(request.replace("multiply?", ""));
 
-	          Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-	          // extract path parameters
-	          query_pairs = splitQuery(request.replace("multiply?", ""));
+	      
+	                String num1Str = query_pairs.get("num1");
+	                String num2Str = query_pairs.get("num2");
 
-	          // extract required fields from parameters
-	          Integer num1 = Integer.parseInt(query_pairs.get("num1"));
-	          Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+	                if (num1Str == null || num2Str == null) {
+	                 
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                    builder.append("Missing required query parameters");
+	                    return builder.toString().getBytes();
+	                }
 
-	          // do math
-	          Integer result = num1 * num2;
-
-	          // Generate response
-	          builder.append("HTTP/1.1 200 OK\n");
-	          builder.append("Content-Type: text/html; charset=utf-8\n");
-	          builder.append("\n");
-	          builder.append("Result is: " + result);
-
-	    
-
-	        } else if (request.contains("github")) {
-	        
-	        	  Map<String, String> queryPairs = splitQuery(request.replace("github?", ""));
-	              String githubQuery = queryPairs.get("query");
+	                Integer num1 = Integer.parseInt(num1Str);
+	                Integer num2 = Integer.parseInt(num2Str);
 
 	       
-	                  // Fetch data from the GitHub API
-	                  String json = fetchURL("https://api.github.com/" + githubQuery);
+	                Integer result = num1 * num2;
 
-	                  // Parse the JSON response
-	                  JSONArray repositories = new JSONArray(json);
+	           
+	                builder.append("HTTP/1.1 200 OK\n");
+	                builder.append("Content-Type: text/html; charset=utf-8\n\n");
+	                builder.append("Result is: ").append(result);
+	                return builder.toString().getBytes();
+	            } catch (NumberFormatException e) {
+	              
+	                builder.append("HTTP/1.1 400 Bad Request\n");
+	                builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                builder.append("Invalid number format");
+	                return builder.toString().getBytes();
+	            } catch (Exception e) {
+	             
+	                builder.append("HTTP/1.1 500 Internal Server Error\n");
+	                builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                builder.append("An unexpected error occurred");
+	                return builder.toString().getBytes(); 
+	            }
 
-	                  // Build the response containing repository information
-	                  builder.append("HTTP/1.1 200 OK\n");
-	                  builder.append("Content-Type: text/html; charset=utf-8\n");
-	                  builder.append("\n");
+	        }  else if (request.contains("github")) {
+	            try {
+	            	
+	                Map<String, String> queryPairs = splitQuery(request.replace("github?", ""));
+	                String githubQuery = queryPairs.get("query");
 
-	                  // Iterate over each repository and extract required information
-	                  for (int i = 0; i < repositories.length(); i++) {
-	                      JSONObject repo = repositories.getJSONObject(i);
-	                      String fullName = repo.getString("full_name");
-	                      int id = repo.getInt("id");
-	                      String ownerLogin = repo.getJSONObject("owner").getString("login");
+	                if (githubQuery == null) {
+	                 
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                    builder.append("Missing 'query' parameter");
+	                    return builder.toString().getBytes();
+	                }
 
-	                      // Append repository information to the response
-	                      builder.append("Repository Full Name: ").append(fullName).append("<br>");
-	                      builder.append("Repository ID: ").append(id).append("<br>");
-	                      builder.append("Owner's Login: ").append(ownerLogin).append("<br><br>");
-	                  }
+	            
+	                String json = fetchURL("https://api.github.com/" + githubQuery);
 
+	       
+	                JSONArray repositories = new JSONArray(json);
 
+	        
+	                builder.append("HTTP/1.1 200 OK\n");
+	                builder.append("Content-Type: text/html; charset=utf-8\n\n");
+
+	               
+	                for (int i = 0; i < repositories.length(); i++) {
+	                    JSONObject repo = repositories.getJSONObject(i);
+	                    String fullName = repo.getString("full_name");
+	                    int id = repo.getInt("id");
+	                    String ownerLogin = repo.getJSONObject("owner").getString("login");
+
+	                 
+	                    builder.append("Repository Full Name: ").append(fullName).append("<br>");
+	                    builder.append("Repository ID: ").append(id).append("<br>");
+	                    builder.append("Owner's Login: ").append(ownerLogin).append("<br><br>");
+	                }
+	                return builder.toString().getBytes();
+	            } catch (Exception e) {
+	          
+	                builder.append("HTTP/1.1 500 Internal Server Error\n");
+	                builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                builder.append("An unexpected error occurred");
+	                return builder.toString().getBytes(); 
+	            }
+	        
 
 	        } else if (request.startsWith("CombineStrings")) {
-	        	
-	       	 int questionMarkIndex = request.indexOf("?");
-	       	 Map<String, String> query_pairs = splitQuery(request.substring(questionMarkIndex + 1));
-	       	 
-	       	   String num1Str = query_pairs.get("Str1");
-	              String num2Str = query_pairs.get("Str2");
-	              
-	              String result = num1Str + num2Str;
-	              builder.append("HTTP/1.1 200 OK\n");
-	              builder.append("Content-Type: text/html; charset=utf-8\n");
-	              builder.append("\n");
-	              builder.append("The combined word is: ").append(result);
-	              
-	              
-	       }  else if (request.startsWith("Age")) {
-	        	
-	       	 int questionMarkIndex = request.indexOf("?");
-	       	 Map<String, String> query_pairs = splitQuery(request.substring(questionMarkIndex + 1));
-	       	 
-	       	   String num1Str = query_pairs.get("DOB");
-	           
-	       	   
-	       	String num2Str = query_pairs.get("RefDate");
-	              
-	       	LocalDate dob = LocalDate.parse(num1Str);
-	        LocalDate reference = LocalDate.parse(num2Str);
-	        int age = Period.between(dob, reference).getYears();
-	        
-	         
-	              builder.append("HTTP/1.1 200 OK\n");
-	              builder.append("Content-Type: text/html; charset=utf-8\n");
-	              builder.append("\n");
-	              builder.append("Age is : ").append(age);
-	              
-	              
-	       } else {
-	          // if the request is not recognized at all
+	            try {
+	                int questionMarkIndex = request.indexOf("?");
+	                if (questionMarkIndex == -1) {
+	                    
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                    builder.append("Missing query parameters");
+	                    return builder.toString().getBytes(); 
+	                }
+	                
+	                String queryString = request.substring(questionMarkIndex + 1);
+	                if (queryString.isEmpty()) {
+	                   
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                    builder.append("Empty query string");
+	                    return builder.toString().getBytes(); 
+	                }
+
+	                Map<String, String> query_pairs = splitQuery(queryString);
+	                String num1Str = query_pairs.get("Str1");
+	                String num2Str = query_pairs.get("Str2");
+
+	                if (num1Str == null || num2Str == null) {
+	                    
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                    builder.append("Missing required query parameters");
+	                    return builder.toString().getBytes(); 
+	                }
+
+	                String result = num1Str + num2Str;
+	                builder.append("HTTP/1.1 200 OK\n");
+	                builder.append("Content-Type: text/html; charset=utf-8\n\n");
+	                builder.append("Result is: ").append(result);
+	                return builder.toString().getBytes(); 
+	            } catch (Exception e) {
+	               
+	                builder.append("HTTP/1.1 500 Internal Server Error\n");
+	                builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                builder.append("An unexpected error occurred");
+	                return builder.toString().getBytes(); 
+	            }
+
+	        } else if (request.startsWith("Age")) {
+	            try {
+	                int questionMarkIndex = request.indexOf("?");
+	                if (questionMarkIndex == -1) {
+	                   
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                    builder.append("Missing query parameters");
+	                    return builder.toString().getBytes();
+	                }
+	                
+	                String queryString = request.substring(questionMarkIndex + 1);
+	                if (queryString.isEmpty()) {
+	                  
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                    builder.append("Empty query string");
+	                    return builder.toString().getBytes(); 
+	                }
+
+	                Map<String, String> query_pairs = splitQuery(queryString);
+	                String num1Str = query_pairs.get("DOB");
+	                String num2Str = query_pairs.get("RefDate");
+
+	                if (num1Str == null || num2Str == null) {
+	                   
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                    builder.append("Missing required query parameters");
+	                    return builder.toString().getBytes(); 
+	                }
+
+	                LocalDate dob = LocalDate.parse(num1Str);
+	                LocalDate reference = LocalDate.parse(num2Str);
+	                int age = Period.between(dob, reference).getYears();
+
+	                builder.append("HTTP/1.1 200 OK\n");
+	                builder.append("Content-Type: text/html; charset=utf-8\n\n");
+	                builder.append("Age is: ").append(age);
+	                return builder.toString().getBytes();
+	            } catch (DateTimeParseException e) {
+	                
+	                builder.append("HTTP/1.1 400 Bad Request\n");
+	                builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                builder.append("Invalid date format");
+	                return builder.toString().getBytes(); 
+	            } catch (Exception e) {
+	                
+	                builder.append("HTTP/1.1 500 Internal Server Error\n");
+	                builder.append("Content-Type: text/plain; charset=utf-8\n\n");
+	                builder.append("An unexpected error occurred");
+	                return builder.toString().getBytes();
+	            }
+	        }
+              else {
+	       
 
 	          builder.append("HTTP/1.1 400 Bad Request\n");
 	          builder.append("Content-Type: text/html; charset=utf-8\n");
@@ -302,7 +400,7 @@ class WebServer {
 	          builder.append("I am not sure what you want me to do...");
 	        }
 
-	        // Output
+	    
 	        response = builder.toString().getBytes();
 	      }
 	    } catch (IOException e) {
