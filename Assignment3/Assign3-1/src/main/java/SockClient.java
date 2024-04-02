@@ -3,6 +3,8 @@ import org.json.JSONObject;
 import java.net.*;
 import java.io.*;
 import java.util.Scanner;
+import org.json.JSONException;
+
 
 /**
  */
@@ -69,11 +71,146 @@ class SockClient {
             while (!num.equals("0")) {
               num = scanner.nextLine();
               array.put(num);
+              
+              
               System.out.println("Got your " + num);
             }
             json.put("type", "addmany");
             json.put("nums", array);
             break;
+          /* Adding this case. */
+          case 4:
+        	    System.out.println("Choose roller.");
+        	    json.put("type", "roller");
+        	    
+        	    try {
+        	    	
+        	    System.out.println("Enter the number of faces on each die:");
+        	    int faces = Integer.parseInt(scanner.nextLine());
+        	    json.put("faces", faces);
+        	    
+        	    System.out.println("Enter the number of dice:");
+        	    
+        	    try {
+        	    	
+        	    int dieCount = Integer.parseInt(scanner.nextLine());
+        	    json.put("dieCount", dieCount);
+        	    
+        	    } catch (NumberFormatException e) {
+        	    	
+        	    	   System.out.println("You must enter integers only.");
+        	    	   JSONObject errorResponse = new JSONObject();
+        	            errorResponse.put("type", "roller");
+        	            errorResponse.put("ok", false);
+        	            errorResponse.put("message", "Invalid input for the number of dice. Please enter an integer.");
+        	            
+        	            os.writeObject(errorResponse.toString());
+        	            os.flush();
+
+        	            requesting = false;
+        	            break;
+                }
+        	    
+            } catch (NumberFormatException e) {
+            	
+            	 System.out.println("You must enter integers only. Please reconnect and retry.");
+            	 JSONObject errorResponse = new JSONObject();
+                 errorResponse.put("type", "roller");
+                 errorResponse.put("ok", false);
+                 errorResponse.put("message", "Invalid input.");
+
+                 os.writeObject(errorResponse.toString());
+                 os.flush();
+
+                 requesting = false;
+                 break;
+            }
+        	    
+        	    break;
+        	   
+         /* Adding inventory */	    
+          case 5:
+        	    System.out.println("Choose inventory.");
+        	    json.put("type", "inventory");
+        	    
+        	    
+        	   
+        	    System.out.println("Enter inventory task (add, view, or buy):");
+        	    String task = scanner.nextLine();
+        	    json.put("task", task);
+        	    int quantity = 0;
+        	    
+        	    try {
+        	    
+        	 
+        	    switch (task) {
+ 
+        	    	// add
+        	        case "add":
+        	            System.out.println("Enter product name:");
+        	            String productName = scanner.nextLine();
+        	            json.put("productName", productName);
+        	           
+        	            System.out.println("Enter quantity:");
+        	            
+        	       try {
+        	             quantity = Integer.parseInt(scanner.nextLine());
+        	            json.put("quantity", quantity);
+        	            
+        	       } catch (NumberFormatException e)  {
+        	    	   
+        	    		 System.out.println("You must enter integers only. Please reconnect and retry.");
+                    	 JSONObject errorResponse = new JSONObject();
+                         errorResponse.put("type", "inventory");
+                         errorResponse.put("ok", false);
+                         errorResponse.put("message", "Invalid quantity input.");
+
+                         os.writeObject(errorResponse.toString());
+                         os.flush();
+        	       }
+        	            
+        	            break;
+        	           
+        	        // buy    
+        	        case "buy":
+        	            System.out.println("Enter product name:");
+        	            productName = scanner.nextLine();
+        	            json.put("productName", productName);
+        	            
+        	            System.out.println("Enter quantity:");
+        	            
+        	            try {
+        	            quantity = Integer.parseInt(scanner.nextLine());
+        	            json.put("quantity", quantity);
+        	            } catch (NumberFormatException e)  {
+        	           	 System.out.println("You must enter integers only. Please reconnect and retry.");
+                    	 JSONObject errorResponse = new JSONObject();
+                         errorResponse.put("type", "inventory");
+                         errorResponse.put("ok", false);
+                         errorResponse.put("message", "Invalid quanitity input.");
+
+                         os.writeObject(errorResponse.toString());
+                         os.flush();
+        	            }
+        	            
+        	            break;
+        	            
+        	    }
+
+        	    break;
+        	    
+        	    } catch (NumberFormatException e) {
+        	    	 System.out.println("You must enter integers only. Please reconnect and retry.");
+                	 JSONObject errorResponse = new JSONObject();
+                     errorResponse.put("type", "inventory");
+                     errorResponse.put("ok", false);
+                     errorResponse.put("message", "Invalid input.");
+
+                     os.writeObject(errorResponse.toString());
+                     os.flush();
+        	    	
+        	    }
+
         }
         if(!requesting) {
           continue;
@@ -89,16 +226,42 @@ class SockClient {
         // !! you will most likely need to parse the response for the other 2 services!
         String i = (String) in.readUTF();
         JSONObject res = new JSONObject(i);
+        
         System.out.println("Got response: " + res);
         if (res.getBoolean("ok")){
-          if (res.getString("type").equals("echo")) {
-            System.out.println(res.getString("echo"));
-          } else {
-            System.out.println(res.getInt("result"));
-          }
+
+            if(res.getString("type").equals("roller")) {
+                JSONObject result = res.getJSONObject("result");
+                System.out.println("Roller result:");
+                for (String face : result.keySet()) {
+                    try {
+                        int frequency = result.getInt(face);
+                        System.out.println(face + ": " + frequency);
+                    } catch (JSONException e) {
+          	    	   System.out.println("Error with JSON.");
+          	    	   JSONObject errorResponse = new JSONObject();
+          	            errorResponse.put("type", "roller");
+          	            errorResponse.put("ok", false);
+          	            errorResponse.put("message", "Error getting JSON result.");
+                    }
+                }  
+            }
+            if (res.getString("type").equals("echo")) {
+                System.out.println(res.getString("echo"));
+            } else {
+            	 if(!res.getString("type").equals("inventory")) {
+                Object resultValue = res.get("result");
+                if (resultValue instanceof Integer) {
+                    System.out.println((Integer) resultValue);
+                }
+                } else {
+                    System.out.println(" ");
+                }
+            }
         } else {
-          System.out.println(res.getString("message"));
+            System.out.println(res.getString("message"));
         }
+
       }
       // want to keep requesting services so don't close connection
       //overandout();

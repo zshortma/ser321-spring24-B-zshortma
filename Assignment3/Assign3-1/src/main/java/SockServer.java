@@ -3,6 +3,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.net.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.io.*;
 
 /**
@@ -15,6 +17,7 @@ public class SockServer {
   static ObjectInputStream in;
 
   static int port = 8888;
+  private static final Map<String, Integer> inventory = new HashMap<>();
 
   public static void main (String args[]) {
 
@@ -88,6 +91,10 @@ public class SockServer {
             res = add(req);
           } else if (req.getString("type").equals("addmany")) {
             res = addmany(req);
+          } else if (req.getString("type").equals("roller")) {
+        	res = roller(req);
+          } else if (req.getString("type").equals("inventory")) {
+        	res = inventory(req);
           } else {
             res = wrongType(req);
           }
@@ -161,18 +168,147 @@ public class SockServer {
     return res;
   }
 
-  // implement me in assignment 3
-  static JSONObject inventory(JSONObject req) {
-    return new JSONObject();
-  }
+// implement me in assignment 3
+//handles the inventory request
+static JSONObject inventory(JSONObject req) {
+	
+	
+	 // Craft request
+	 System.out.println("Inventory request: " + req.toString());
+	  JSONObject res = new JSONObject(); 
+      res.put("type", "inventory"); 
 
-  // implement me in assignment 3
-  static JSONObject roller(JSONObject req) {
-    return new JSONObject();
-  }
+
+      // Retrieve the task type from the request
+      String task = req.getString("task");
+      res.put("task", task); 
+
+     
+      switch (task) {
+          case "add":
+              // Get the product name and quantity from the request
+              String productName = req.getString("productName");
+              int quantity = req.getInt("quantity");
+
+              // Add the product to inventory
+              inventory.put(productName, quantity);
+
+              // Sucess
+              res.put("ok", true);
+              res.put("message", "Product added to inventory successfully.");
+              break;
+
+          case "view":
+        	  
+              // craft view logic based on items in the system.
+              JSONArray inventoryList = new JSONArray();
+              for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
+                  JSONObject item = new JSONObject();
+                  item.put("product", entry.getKey());
+                  item.put("quantity", entry.getValue());
+                  inventoryList.put(item);
+              }
+              //sucess
+              res.put("ok", true);
+              res.put("result", inventoryList);
+              break;
+
+          case "buy":
+              // Get the product name and quantity 
+              productName = req.getString("productName");
+              quantity = req.getInt("quantity");
+
+              // Is there any items?
+              if (!inventory.containsKey(productName)) {
+                  res.put("ok", false);
+                  res.put("message", "Product " + productName + " not in inventory");
+                  break;
+              }
+
+         
+              int availableQuantity = inventory.get(productName);
+              if (quantity > availableQuantity) {
+                  res.put("ok", false);
+                  res.put("message", "Product " + productName + " not available in quantity " + quantity);
+                  break;
+              }
+
+            
+              inventory.put(productName, availableQuantity - quantity);
+
+              // success response
+              res.put("ok", true);
+              res.put("message", "Product(s) bought successfully.");
+              break;
+
+          default:
+             
+              res.put("ok", false);
+              res.put("message", "Invalid task provided.");
+              break;
+      }
+
+   // Return the response
+      return res; 
+
+}
+
+
+// implement me in assignment 3
+static JSONObject roller(JSONObject req) {
+
+// Craft message request
+ System.out.println("Roller request: " + req.toString());
+ JSONObject res = new JSONObject();
+ res.put("type", "roller");
+ res.put("ok", false); 
+
+ try {
+ 
+     int dieCount = req.getInt("dieCount");
+     int faces = req.getInt("faces");
+
+     // error handling if items are entered negativly   
+     if (dieCount <= 0 || faces <= 0) {
+         res.put("ok", false);
+         res.put("message", "Die count and faces must be positive integers.");
+         return res;
+     }
+
+     // Roll logic
+     Map<Integer, Integer> result = new HashMap<>();
+     for (int i = 0; i < dieCount; i++) {
+         int roll = (int) (Math.random() * faces) + 1;
+         result.put(roll, result.getOrDefault(roll, 0) + 1);
+     }
+
+     //Create JSON
+     JSONObject resultJson = new JSONObject();
+     for (Map.Entry<Integer, Integer> entry : result.entrySet()) {
+         resultJson.put(entry.getKey().toString(), entry.getValue());
+     }
+
+     // Sucess!
+     res.put("ok", true);
+     res.put("result", resultJson);
+     
+ } catch (NumberFormatException e) {
+     res.put("ok", false);
+     res.put("message", "Invalid input format: must be integers.");
+     
+ } catch (JSONException e) {
+     res.put("ok", false);
+     res.put("message", "Invalid request format: " + e.getMessage());
+ }
+
+ // Return reposnse
+ return res;
+}
+
 
   // handles the simple addmany request
   static JSONObject addmany(JSONObject req){
+	  
     System.out.println("Add many request: " + req.toString());
     JSONObject res = testField(req, "nums");
     if (!res.getBoolean("ok")) {
