@@ -54,6 +54,6 @@ C. To start program you can use the simple (as descibed in document) : gradle ru
 
 D. 
 
-E.
+E. 
 
-F.
+F. With TCP we are given realiable and garenteed packet deleiveries, however, with UDP that is not the case. I would have to implement reliablility mechanisms to help ensure all messages are being deleivered and in order. UDP also would require more error handling development as things such as checksums and again..message delivery would need to be handled. Overall, code would need to be in general refactored and much more error handling and checking will need to be done. 
