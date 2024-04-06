@@ -52,8 +52,61 @@ There are things that are not perfect -but I tried my best to at least attempt a
 
 C. To start program you can use the simple (as descibed in document) : gradle runServer and gradle runClient. 
 
-D. 
+D. Below is my responses and Request (simplified a bit) :
 
-E. 
+[Connect Request]
+[Description]: The client initiate a connection request to the server when starting.
+[Possible Responses]: Success, Error
+
+[Name Request]
+[Description]: After connecting to the server, the client is prompted to provide its name.
+[Possible Responses]: Success, Error
+
+[Menu Request]
+[Description]: The client is given a menu of options.
+[Possible Responses]:Success, Error
+
+[Game Start Request]
+[Description]: New the game session.
+[Possible Responses]: Success,Error
+
+[Guess Request]
+[Description]: Client submits a guess for the location.
+[Possible Responses]: Correct Guess, Incorrect Guess, Error
+
+[Leaderboard Request]
+[Description]: Client requests to view the leaderboard.
+[PossibleResponses]: Success, Error
+
+[Quit Request]
+[Description]: Client requests to quit game.
+[PossibleResponses]: Success
+
+
+[Success Response]
+[Description]: Tells whether there was a successful completion of a request .
+[Possible Triggers]: Various successful operations.
+[Possible Causes]: Correct input, successful execution server logic.
+[Actions]: Proceed to the next step or continue with the current operation.
+
+[Error Response]
+[Description]: There was an error  during processing of the request.
+[Possible Triggers]: Invalid input, server-side errors,.
+[Possible Causes]: Incorrect input, unplanned senireos. 
+[Actions]: Prompt the user to reconnect or guide on input format.
+
+[Leaderboard Response]
+[Description]: Contains the requested leaderboard data.
+[Possible Triggers]: Client requests to view the leaderboard.
+[Possible Causes]: Successful view of leaderboard  from the serverr.
+[Actions]: Display the leaderboard data to the client for viewing.
+
+[GameOver Response]
+[Description]: Indicates the end of the game session.
+[Possible Triggers]: Timer is over or user did (-q) initiated quit.
+[Possible Causes]: Timer reaching its limit or user deciding to end the game.
+[Actions]: Display the final score to the client, prompt for further actions.
+
+E. To help ensure a robust program I implement : error handling on the readings/writings of ints and strings, I checked that files exsited before attempting to open them, and implement try and catch blocks for JSON object creations/modifications as well as other general code block that needed extra error handling to ensure the server was to not crash. I also, attempted to create cases for certain behaviors such as quit game that would help protect my program from unexpected and unplanned error handling this protection was disabling the input text box and button when the user quit the program. This helps protect my program from unexpected interactions with the users. 
 
 F. With TCP we are given realiable and garenteed packet deleiveries, however, with UDP that is not the case. I would have to implement reliablility mechanisms to help ensure all messages are being deleivered and in order. UDP also would require more error handling development as things such as checksums and again..message delivery would need to be handled. Overall, code would need to be in general refactored and much more error handling and checking will need to be done. 
