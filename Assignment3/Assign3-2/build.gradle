@@ -20,7 +20,9 @@ task runClient(type: JavaExec) {
 
   main = 'Assign32starter.ClientGui'
   standardInput = System.in
-  args "1"
+
+  // Default host and port
+  args = ["localhost", "8080"]
 }
 
 task runServer(type: JavaExec) {
@@ -30,4 +32,7 @@ task runServer(type: JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
 
   main = 'Assign32starter.SockServer'
+
+  // Default port
+  args = ["8080"]
 }

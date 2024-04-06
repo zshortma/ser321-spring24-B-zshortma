@@ -25,19 +25,26 @@ public class SockServer {
 		try {
 			
 			//opening the socket here, just hard coded since this is just a bas example
-			ServerSocket serv = new ServerSocket(8888); // TODO, should not be hardcoded
+			ServerSocket serv = new ServerSocket(8888); 
 			System.out.println("Server ready for connetion");
 
 			// placeholder for the person who wants to play a game
-			String name = "";
+			String name = "Unnamed";
+			String selection = "";
+			String time = "0";
 			int points = 0;
+			int count = 0;
+			boolean requesting = true;
+
+			JSONObject req = new JSONObject();
 
 			// read in one object, the message. we know a string was written only by knowing what the client sent. 
 			// must cast the object from Object to desired type to be useful
 			while(true) {
+
 				sock = serv.accept(); // blocking wait
 
-				// could totally use other input outpur streams here
+				
 				ObjectInputStream in = new ObjectInputStream(sock.getInputStream());
 				OutputStream out = sock.getOutputStream();
 
@@ -46,37 +53,151 @@ public class SockServer {
 
 				JSONObject response = new JSONObject();
 
+
+				/**
+				 * Based on type. 
+				 */
 				if (json.getString("type").equals("start")){
 					
 					System.out.println("- Got a start");
 				
 					response.put("type","hello" );
 					response.put("value","Hello, please tell me your name." );
-					sendImg("img/hi.png", response); // calling a method that will manipulate the image and will make it send ready
 					
+					
+				} else if (json.getString("type").equals("name")) {
+
+                 System.out.println("- Got a name");
+                 name = json.getString("value");
+                 response.put("type", "message");
+                 response.put("value", "Hello, " + name + "! Welcome to the game.");
+
+				 PrintWriter outWrite = new PrintWriter(sock.getOutputStream(), true); 
+
+				 outWrite.println(response.toString());
+
+				 response.put("type", "instructions");
+                 response.put("value", "Type in textbox what you would like to do : (see leaderboard) : -l     (play game) : -g    (quit game) : -q");
+				 outWrite.println(response.toString());
+			
+			} else if (json.getString("type").equals("selection")) {
+
+				System.out.println("- Got a chioce");
+				selection = json.getString("value");
+				response.put("type", "message");
+				response.put("value", "You chose " + selection);
+
+				/**
+				 * Handling for choice of selection in menu. 
+				 */
+				if (selection.equals("-l") || selection.equals("-g") || selection.equals("-q")  ) {
+
+			     PrintWriter outWrite = new PrintWriter(sock.getOutputStream(), true); 
+			     outWrite.println(response.toString());
+				 count++;
+
+			 if (selection.equals("-l")) {
+
+				response.put("type", "leaderboard");
+				response.put("value", "You are viewing the leaderboard : ");
+				PrintWriter outWrite2 = new PrintWriter(sock.getOutputStream(), true); 
+				outWrite2.println(response.toString());
+
+				leaderBoardView();
+
+			 } else if (selection.equals("-q")) {
+
+				response.put("type", "quit");
+				response.put("value", "Goodbye. Thanks for playing! Further interaction is disabled, reconnect to restart.");
+				PrintWriter outWrite2 = new PrintWriter(sock.getOutputStream(), true); 
+				outWrite2.println(response.toString());
+				requesting = false;
+
+			 } else if (selection.equals("-g") ) {
+
+				response.put("type", "startgame");
+				response.put("value", "Before the game starts, enter the amount of seconds you want for the timer: ");
+				PrintWriter outWrite2 = new PrintWriter(sock.getOutputStream(), true); 
+				outWrite2.println(response.toString());
+			
+				time = json.getString("value");
+				response.put("type", "timer");
+				response.put("value", "You chose " + time);
+				outWrite2.println(response.toString());
+			
+				String imageFilename = "ASU1.png"; 
+				JSONObject imageResponse = sendImg(imageFilename);
+				outWrite2.println(imageResponse.toString());
+
+			 }
+			} else {
+
+				if ( count == 0){
+
+				response.put("type", "instructions");
+				response.put("value", "(-l -g -q) are the only options avalible. (case sensitive :)");
+				PrintWriter outWrite = new PrintWriter(sock.getOutputStream(), true); 
+				outWrite.println(response.toString());
+
+				} else {
+					response.put("type", "instructions");
+				    response.put("value", "Your time starts now. Make a guess or type : next, left, right.");
+
+					time = json.getString("value");
+					PrintWriter outWrite2 = new PrintWriter(sock.getOutputStream(), true); 
+				    outWrite2.println(response.toString());
+					response.put("type", "timer");
+					response.put("value", "You chose " + time);
+					outWrite2.println(response.toString());
+				
+					
+					String imageFilename = "img/ASU1.png"; 
+					JSONObject imageResponse = sendImg(imageFilename);
+					outWrite2.println(imageResponse.toString());
 				}
+
+			}
+
+		} 
 				else {
 					System.out.println("not sure what you meant");
 					response.put("type","error" );
 					response.put("message","unknown response" );
 				}
-				PrintWriter outWrite = new PrintWriter(sock.getOutputStream(), true); // using a PrintWriter here, you could also use and ObjectOutputStream or anything you fancy
+				PrintWriter outWrite = new PrintWriter(sock.getOutputStream(), true); 
 				outWrite.println(response.toString());
 			}
-			
+
 		} catch(Exception e) {e.printStackTrace();}
 	}
 
-	/* TODO this is for you to implement, I just put a place holder here */
-	public static JSONObject sendImg(String filename, JSONObject obj) throws Exception {
-		File file = new File(filename);
+	public static void leaderBoardView(){
+		return;
+	}
 
+	public static JSONObject sendImg(String filename) throws Exception {
+		File file = new File(filename);
+		JSONObject obj = new JSONObject();
+	
 		if (file.exists()) {
-			// import image
-			// I did not use the Advanced Custom protocol
-			// I read in the image and translated it into basically into a string and send it back to the client where I then decoded again
-			obj.put("image", "Pretend I am this image: " + filename);
-		} 
+
+			// Read the image file
+			BufferedImage image = ImageIO.read(file);
+			
+			// Convert image to string
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ImageIO.write(image, "jpg", baos);
+			byte[] imageBytes = baos.toByteArray();
+			String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+			
+			// Create the JSON object with image data
+			obj.put("type", "image");
+			obj.put("value", base64Image);
+		} else {
+			obj.put("type", "error");
+			obj.put("message", "Image file not found");
+		}
 		return obj;
 	}
+	
 }

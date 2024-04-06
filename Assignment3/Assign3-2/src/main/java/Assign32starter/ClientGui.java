@@ -47,9 +47,10 @@ public class ClientGui implements Assign32starter.OutputPanel.EventHandlers {
 	ObjectOutputStream os;
 	BufferedReader bufferedReader;
 
-	// TODO: SHOULD NOT BE HARDCODED change to spec
+	int loops = 0;
 	String host = "localhost";
-	int port = 9000;
+	int port = 8080;
+	private int counter = 0;
 
 	/**
 	 * Construct dialog
@@ -88,6 +89,7 @@ public class ClientGui implements Assign32starter.OutputPanel.EventHandlers {
 
 		open(); // opening server connection here
 		currentMess = "{'type': 'start'}"; // very initial start message for the connection
+
 		try {
 			os.writeObject(currentMess);
 		} catch (IOException e) {
@@ -99,12 +101,7 @@ public class ClientGui implements Assign32starter.OutputPanel.EventHandlers {
 		JSONObject json = new JSONObject(string);
 		outputPanel.appendOutput(json.getString("value")); // putting the message in the outputpanel
 
-		// reading out the image (abstracted here as just a string)
-		System.out.println("Pretend I got an image: " + json.getString("image"));
-		/// would put image in picture panel
-		close(); //closing the connection to server
-
-		// Now Client interaction only happens when the submit button is used, see "submitClicked()" method
+		close(); 
 	}
 
 	/**
@@ -124,7 +121,6 @@ public class ClientGui implements Assign32starter.OutputPanel.EventHandlers {
 	 */
 	public void newGame(int dimension) {
 		picPanel.newGame(1);
-		outputPanel.appendOutput("Started new game with a " + dimension + "x" + dimension + " board.");
 	}
 
 	/**
@@ -137,24 +133,31 @@ public class ClientGui implements Assign32starter.OutputPanel.EventHandlers {
 	 * @throws IOException An error occured with your image file
 	 */
 	public boolean insertImage(String filename, int row, int col) throws IOException {
+
 		System.out.println("Image insert");
 		String error = "";
+
 		try {
 			// insert the image
 			if (picPanel.insertImage(filename, row, col)) {
-				// put status in output
-				outputPanel.appendOutput("Inserting " + filename + " in position (" + row + ", " + col + ")"); // you can of course remove this
+
 				return true;
+
 			}
+
 			error = "File(\"" + filename + "\") not found.";
+
 		} catch(PicturePanel.InvalidCoordinateException e) {
 			// put error in output
 			error = e.toString();
 		}
+
 		outputPanel.appendOutput(error);
 		return false;
 	}
 
+
+	
 	/**
 	 * Submit button handling
 	 * 
@@ -164,36 +167,107 @@ public class ClientGui implements Assign32starter.OutputPanel.EventHandlers {
 	@Override
 	public void submitClicked() {
 		try {
-		open(); // opening a server connection again
+
+		open();
+
 		System.out.println("submit clicked ");
-
-		// Pulls the input box text
+	
 		String input = outputPanel.getInputText();
+      
+		JSONObject request = new JSONObject();
 
-		// TODO evaluate the input from above and create a request for client. 
+		/* Allows users to select choice from menu. */
+		if (counter == 0){
+        request.put("type", "name"); // Set the type of request
+        request.put("value", input); // Set the value to the input text
+		counter++;
+		} else if (counter >= 1){
+			request.put("type", "selection"); // Set the type of request
+			request.put("value", input); // Set the value to the input text
+		}
 
-		// send request to server
-		try {
-			  os.writeObject("Blub"); // this will crash the server, since it is not a JSON and thus the server will not handle it. 
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+        // Send the JSON request to the server
+        os.writeObject(request.toString());
+
+        // Wait for a response from the server
+        String response = bufferedReader.readLine();
+        System.out.println("Response from server: " + response);
+
+		JSONObject jsonResponseVal = new JSONObject(response);
+		outputPanel.appendOutput(jsonResponseVal.getString("value"));
+
+		String responseJSON = bufferedReader.readLine();
+
+
+		/* Handle responses from server */
+		if (responseJSON != null) {
+
+		JSONObject jsonResponse = new JSONObject(responseJSON);
+		
+
+		/**
+		 * Handle based on type!
+		 */
+        if (jsonResponse.getString("type").equals("message")) {
+
+		} else if (jsonResponse.getString("type").equals("quit")) {
+
+			outputPanel.appendOutput(jsonResponse.getString("value"));
+			outputPanel.disableSubmitButton();
+
+		} else if (jsonResponse.getString("type").equals("timer")) {
+
+			loops++;
+			int imageCounter = 0;
+			Boolean Incorrect = false;
+			if (loops == 1){
+			insertImage("img/ASU1.png", 0, 0);
+			
+			}
+			imageCounter++;
+			System.out.println(loops-1);
+			if (loops == 2){
+				insertImage("img/Berlin2.png", 0, 0);
+				outputPanel.setPoints(loops-1);
 			}
 
-		// wait for an answer and handle accordingly
-		try {
-			System.out.println("Waiting on response");
-			String string = this.bufferedReader.readLine();
-			System.out.println(string);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		close();
+			if (loops == 3){
+				insertImage("img/Paris3.png", 0, 0);
+				outputPanel.setPoints(loops-1);
+			}
+
+			if( loops == 4){
+				if(Incorrect){
+					insertImage("img/lose.jpg", 0, 0);
+				} else {
+					insertImage("img/win.jpg", 0, 0);
+					outputPanel.setPoints(loops-1);
+					outputPanel.appendOutput("Always a winner 3 out of 3");
+					outputPanel.disableSubmitButton();
+				}
+			}
+		} else {
+            outputPanel.appendOutput(jsonResponse.getString("value"));
+        }
+	}
+
+	   outputPanel.setInputText(""); // Clears input textbox
+		close(); // Close connection
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
+
+
+	/*
+	 * Allows access to disable subit button. 
+	 */
+	@Override
+	public void disableSubmitButton() {
+		outputPanel.disableSubmitButton(); 
+
+	}
+
 
 	/**
 	 * Key listener for the input text box
@@ -218,6 +292,7 @@ public class ClientGui implements Assign32starter.OutputPanel.EventHandlers {
 
 	}
 	
+
 	public void close() {
         try {
             if (out != null)  out.close();
@@ -230,20 +305,13 @@ public class ClientGui implements Assign32starter.OutputPanel.EventHandlers {
 
 	public static void main(String[] args) throws IOException {
 		// create the frame
-
-
 		try {
 			String host = "localhost";
 			int port = 8888;
-
-
 			ClientGui main = new ClientGui(host, port);
+			main.newGame(1);
+			main.insertImage("img/hi.png", 0, 0);
 			main.show(true);
-
-
 		} catch (Exception e) {e.printStackTrace();}
-
-
-
 	}
 }

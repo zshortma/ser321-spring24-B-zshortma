@@ -42,6 +42,7 @@ public class OutputPanel extends JPanel {
     
     // executes when the submit button is clicked
     void submitClicked();
+    void disableSubmitButton();
   }
   private JLabel pointsLabel = new JLabel("Current Points this round: 0");
   private JTextField input;
@@ -164,11 +165,24 @@ public class OutputPanel extends JPanel {
     handlers.add(handlerObj);
   }
   
+  public void disableSubmitButton() {
+    submit.setEnabled(false); // Assuming submitButton is the reference to your submit button
+    input.setEnabled(false);
+}
+
   /**
    * Append a message to the output panel
    * @param message - the message to print
    */
   public void appendOutput(String message) {
     area.append(message + "\n");
+  }
+
+    /**
+     * Display the response from the server in the output panel
+     * @param response - the response from the server
+     */
+    public void displayResponse(String response) {
+      appendOutput("Server response: " + response);
   }
 }
