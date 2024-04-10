@@ -127,20 +127,12 @@ public class Client {
         stdin = new BufferedReader(new InputStreamReader(System.in));
         try {
             if (args.length != 2) {
-                // gradle runClient -Phost=localhost -Pport=9099 -q --console=plain
-                System.out.println("Usage: gradle runClient -Phost=localhost -Pport=9099");
-                System.exit(0);
+                host = "localhost";
+                port = 8000;
             }
 
             host = args[0];
-            port = -1;
-            try {
-                port = Integer.parseInt(args[1]);
-            } catch (NumberFormatException nfe) {
-                System.out.println("[Port] must be an integer");
-                System.exit(2);
-            }
-
+            port = Integer.parseInt(args[1]);
             sock = new Socket(host, port);
             OutputStream out = sock.getOutputStream();
             InputStream in = sock.getInputStream();

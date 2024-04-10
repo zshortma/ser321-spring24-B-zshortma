@@ -7,6 +7,11 @@ repositories {
 dependencies {
    implementation group: 'org.json', name: 'json', version: '20200518'
 }
+ext {
+    defaultPort = 8000
+    host= 'localhost'
+     defaultMaxConnections = 2
+}
 
 //define main class
 mainClassName = 'Concentration'
@@ -20,11 +25,17 @@ task runTask1(type: JavaExec) {
   main = 'taskone.Server'
   standardInput = System.in
   
-  // gradle runServer -Pport=9099 -q --console=plain
-  if (project.hasProperty('port')) {
-    args(project.getProperty('port'));
-  }
+    if (!project.hasProperty('port')) {
+        project.ext.port = defaultPort
+    }
+
+    if (!project.hasProperty('host')) {
+        project.ext.host = defaultHost
+    }
+
+    args(project.getProperty('host'), project.getProperty('port'))
 }
+
 
 task runTask2(type: JavaExec) {
   group 'server'
@@ -35,11 +46,17 @@ task runTask2(type: JavaExec) {
   main = 'taskone.ThreadedServer'
   standardInput = System.in
   
-  // gradle runServer -Pport=9099 -q --console=plain
-  if (project.hasProperty('port')) {
-    args(project.getProperty('port'));
-  }
+    if (!project.hasProperty('port')) {
+        project.ext.port = defaultPort
+    }
+
+    if (!project.hasProperty('host')) {
+        project.ext.host = defaultHost
+    }
+
+    args(project.getProperty('host'), project.getProperty('port'))
 }
+
 
 task runTask3(type: JavaExec) {
     group 'server'
@@ -50,10 +67,19 @@ task runTask3(type: JavaExec) {
     main = 'taskone.ThreadPoolServer'
     standardInput = System.in
   
-    // gradle runTask3 -Pport=9099 -PmaxConnections=5 -q --console=plain
-    if (project.hasProperty('port') && project.hasProperty('maxConnections')) {
-        args(project.getProperty('port'), project.getProperty('maxConnections'));
+ 
+    if (!project.hasProperty('port')) {
+        project.ext.port = defaultPort
     }
+    if (!project.hasProperty('host')) {
+        project.ext.host = defaultHost
+    }
+    if (!project.hasProperty('maxConnections')) {
+        project.ext.maxConnections = defaultMaxConnections
+    }
+
+    args(project.getProperty('port'), project.getProperty('maxConnections'),project.getProperty('host'))
+
 }
 
 
@@ -67,9 +93,19 @@ task runClient(type: JavaExec) {
   main = 'taskone.Client'
   standardInput = System.in
   
-  // gradle runClient -Phost=localhost -Pport=9099 -q --console=plain
   if (project.hasProperty("host") && project.hasProperty('port')) {
     args(project.getProperty('host'), project.getProperty('port'));
   }
+
+
+    if (!project.hasProperty('port')) {
+        project.ext.port = 8000 
+    }
+
+    if (!project.hasProperty('host')) {
+        project.ext.host = 'localhost' 
+    }
+
+   args(project.getProperty('host'), project.getProperty('port'))
 }
 
