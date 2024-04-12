@@ -20,6 +20,7 @@ To run the third thread pool : gradle runTask3
 
 What the program excepts :
 
+clean and build using 7.4.2 gradle and java 18. 
 Clients should connect to server then should then specify what they would like to do entering a number 0-4.
 The user can then enter an interger, sort, add, switch or quit if they would like to. For switch please do not do zero based indexing, start at 1.
 
