@@ -26,7 +26,9 @@ public class ThreadPoolServer {
         this.activeConnections = new AtomicInteger(0);
     }
 
-public void start(String host, int port, int maxConnections) {
+public void start(String host, int port, int maxConnections, StringList strings) {
+    
+    
     try (ServerSocket serverSocket = new ServerSocket(port, 0, InetAddress.getByName(host))) {
         System.out.println("ThreadPoolServer Started on " + host + ":" + port);
         while (true) {
@@ -38,7 +40,7 @@ public void start(String host, int port, int maxConnections) {
                 socket.close();
             } else {
                 // Submit a task to the thread pool for handling the client connection
-                threadPool.submit(new ClientHandler(socket, activeConnections, maxConnections));
+                threadPool.submit(new ClientHandler(socket, activeConnections, maxConnections, strings));
                 activeConnections.incrementAndGet(); // Increment active connections count
             }
         }
@@ -53,9 +55,10 @@ public void start(String host, int port, int maxConnections) {
             System.out.println("Usage: gradle runTask3 -Pport=9099 -PmaxConnections=5 -q --console=plain");
             System.exit(1);
         }
-        String host = args[2];
         int port;
+        String host = "localhost"; 
         int maxConnections;
+        StringList strings = new StringList();
 
         try {
             port = Integer.parseInt(args[0]);
@@ -67,7 +70,7 @@ public void start(String host, int port, int maxConnections) {
         }
 
         ThreadPoolServer server = new ThreadPoolServer(maxConnections);
-        server.start(host, port, maxConnections );
+        server.start(host, port, maxConnections, strings );
     }
 }
 
@@ -76,11 +79,13 @@ class ClientHandler implements Runnable {
     private final Socket socket;
     private final AtomicInteger activeConnections;
     private final int maxConnections;
+    private final StringList strings;
 
-    public ClientHandler(Socket socket, AtomicInteger activeConnections, int maxConnections) {
+    public ClientHandler(Socket socket, AtomicInteger activeConnections, int maxConnections, StringList strings) {
         this.socket = socket;
         this.activeConnections = activeConnections;
         this.maxConnections = maxConnections;
+        this.strings = strings;
     }
 
     @Override
@@ -92,17 +97,16 @@ class ClientHandler implements Runnable {
 
         try {
             // Check if maximum connections reached
-            if (activeConnections.get() >= maxConnections) {
+            if (activeConnections.get()-1 > maxConnections) {
                 System.out.println("Max connections reached. Rejecting new connection.");
-                return; 
+                socket.close();
+                return;
             }
 
             // Increment active connections count
             activeConnections.incrementAndGet();
-            InputStream inputStream = socket.getInputStream();
-            OutputStream outputStream = socket.getOutputStream();
-            String response = "Response to client request";
-            outputStream.write(response.getBytes());
+            Performer performer = new Performer(socket, strings);
+            performer.doPerform();
             
         } catch (IOException e) {
             e.printStackTrace();

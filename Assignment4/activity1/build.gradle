@@ -10,7 +10,7 @@ dependencies {
 ext {
     defaultPort = 8000
     host= 'localhost'
-     defaultMaxConnections = 2
+    defaultMaxConnections = 2
 }
 
 //define main class

@@ -21,7 +21,7 @@ class Server {
         StringList strings = new StringList();
 
         if (args.length != 2) {
-            System.out.println("Usage: gradle runServer -Pport=9099 -Phost=localhost -q --console=plain");
+            System.out.println("Usage: gradle runTask1 -Pport=9099 -Phost=localhost -q --console=plain");
             port = 8000; // Default port
             host = "localhost"; 
         } else {

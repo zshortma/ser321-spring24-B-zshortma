@@ -13,25 +13,19 @@ import java.net.Socket;
 public class ThreadedServer {
 
     public static void main(String[] args) throws Exception {
-         int port = 8000;
-         String host = "localhost";
+        int port;
+        String host = "localhost"; 
         StringList strings = new StringList();
 
         if (args.length != 2) {
-            System.out.println("Usage: gradle runServer -Phost=localhost -Pport=9099 -q --console=plain");
-            System.exit(1);
-             port = 8000;
-             host = "localhost";
+            System.out.println("Usage: gradle runTask2 -Pport=9099 -Phost=localhost -q --console=plain");
+            port = 8000; // Default port
+            host = "localhost"; 
         } else {
+            port = Integer.parseInt(args[1]);
             host = args[0];
-            try {
-                port = Integer.parseInt(args[1]);
-            } catch (NumberFormatException nfe) {
-                System.out.println("[Port] must be an integer");
-                System.exit(2);
-            }
         }
-
+        
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("Server Started...");
             while (true) {
@@ -46,22 +40,24 @@ public class ThreadedServer {
     }
 
     private static void handleClient(Socket socket, StringList strings) {
-        Thread clientThread = new Thread(() -> {
+        Runnable clientTask = () -> {
             try {
 
-            InputStream inputStream = socket.getInputStream();
-            byte[] buffer = new byte[1024];
-            int bytesRead = inputStream.read(buffer);
-            String clientRequest = new String(buffer, 0, bytesRead);
-            OutputStream outputStream = socket.getOutputStream();
-            String response = "Response to client request";
-            outputStream.write(response.getBytes());
-
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
+                Performer performer = new Performer(socket, strings);
+                performer.doPerform();
+            } finally {
+                try {
+                    // Close the socket
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-        });
+        };
+
+        // Start a new thread to handle the client
+        Thread clientThread = new Thread(clientTask);
         clientThread.start();
     }
+
 }
