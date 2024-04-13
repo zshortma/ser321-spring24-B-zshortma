@@ -19,6 +19,7 @@ Requirements completed :
 The game/leaderboard isn't fully implemented. But I attempted (see code)
 
 please note : Multiple clients can connect but they must dissconnect to allow the other to get a response. 
+please note : I did the task for adding to AWS tmux session, however I noticed siginifacant lag with repsonses. 
 
 [x] The project needs to run through Gradle (nothing really to do here, just keep the Gradle file as is)
 [x] (6 points) You need to implement the given protocol (Protobuf) see the Protobuf files, the PROTOCOL.md and the Protobuf example in the examples repo (this is NOT an optional requirement). If you do not do this you will lose 15 points (instead of getting the 6 points) since then our client will not run with your server for testing and thus basically your interface is wrong and not what the customer asked for.
