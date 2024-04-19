@@ -1,0 +1,59 @@
+// set as java application
+apply plugin: 'application'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'org.json', name: 'json', version: '20200518'
+}
+
+def nodeName = "test"
+def nodes = 'localhost:8000'
+def leader = 'localhost:8000'
+def isLeader = false
+
+// task reading in the arguments if any given, if not the default from above will be used
+task arguments {
+	if (project.hasProperty("nodeName")) {
+      nodeName = project.getProperty("nodeName")
+    }
+    if (project.hasProperty("nodes")) {
+      nodes = project.getProperty("nodes")
+    }
+    if (project.hasProperty("leader")) {
+      leader = project.getProperty("leader")
+    }
+    if (project.hasProperty("isLeader")) {
+      isLeader = project.getProperty("isLeader")
+    }
+} 
+
+task runNode(type: JavaExec) {
+  description 'Runs node'
+
+  classpath = sourceSets.main.runtimeClasspath
+
+  main = 'Node'
+  standardInput = System.in
+
+  args nodeName
+  args nodes
+  args leader
+  args isLeader
+}
+
+task runLeader(type: JavaExec) {
+  description 'Runs leader'
+
+  classpath = sourceSets.main.runtimeClasspath
+
+  main = 'Node'
+  standardInput = System.in
+
+  args nodeName
+  args nodes
+  args leader
+  args isLeader
+}
