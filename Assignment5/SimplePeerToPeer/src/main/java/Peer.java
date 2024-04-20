@@ -49,8 +49,15 @@ public class Peer {
 		Peer peer = new Peer(bufferedReader, args[0], serverThread);
 		peer.updateListenToPeers();
 		
+		
 	}
 	
+	/**
+	 * This helps with testing the connected peers and ensuring they are 
+	 * getting added to the nodes. 
+	 * @param username
+	 * @param port
+	 */
 	private static void writeDataToFile(String username, String port) {
         try {
             FileWriter fileWriter = new FileWriter("peer_tracker.txt", true);
@@ -120,17 +127,23 @@ public class Peer {
 
 					askForInput();
 					retryConnectionFromFirstPeer(port1, port2);
+					retryConnectionFromFirstPeer(port2, port1);
 					
                 }
             } else {
 			
-                System.out.println("Not enough peers found in the tracker.");
+                System.out.println("Not enough peers found. Waiting for another connection.");
             }
 
             Thread.sleep(2000); 
         }
     }
 	
+    /**
+     * This is to allow the peers to reach back out to newer nodes to get connected to all peers. 
+     * @param port1
+     * @param port2
+     */
 	private void retryConnectionFromFirstPeer(String port1, String port2) {
 		new Thread(() -> {
 			while (true) {

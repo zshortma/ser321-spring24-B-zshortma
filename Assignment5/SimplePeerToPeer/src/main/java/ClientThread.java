@@ -19,6 +19,8 @@ import org.json.*;
         bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.port = port; // Set the port
     }
+    
+    
 public void run() {
         try {
             while (!isInterrupted()) {

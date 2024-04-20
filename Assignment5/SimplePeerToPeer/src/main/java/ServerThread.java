@@ -27,14 +27,6 @@ public class ServerThread extends Thread{
 	public ServerThread(String portNum) throws IOException {
 		serverSocket = new ServerSocket(Integer.valueOf(portNum));
 	}
-	
-	public static synchronized ServerThread getInstance(String portNum) throws IOException {
-        if (instance == null) {
-            instance = new ServerThread(portNum);
-            instance.start();
-        }
-        return instance;
-    }
 
 	/**
 	 * Starting the thread, we are waiting for clients wanting to talk to us, then save the socket in a list
@@ -58,6 +50,10 @@ public class ServerThread extends Thread{
 		}
 	}
 	
+	/**
+	 * Sends message to all stored peers.
+	 * @param message
+	 */
 	void sendMessage(String message) {
 		try {
 			for (Socket s : listeningSockets) {
@@ -69,6 +65,11 @@ public class ServerThread extends Thread{
 		}
 	}
 
+	/**
+	 * Sends message to server if needed. 
+	 * @param clientSocket
+	 * @param message
+	 */
 	public void sendToServer(Socket clientSocket, String message) {
 		try {
 			PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
