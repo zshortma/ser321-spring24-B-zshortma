@@ -1,4 +1,8 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -27,10 +31,16 @@ public class Node {
 	private BufferedReader bufferedReader;
 	private ServerThread serverThread;
 
+
+    
+    private Set<SocketInfo> nodeSet; 
+    private Map<Integer, SocketInfo> nodeMap; 
 	private Set<SocketInfo> nodes = new HashSet<SocketInfo>();
 	private boolean leader = false;
 	private SocketInfo leaderSocket;
-
+	public int wordLength;
+    public static  String inputMessage;
+    public static int counter;
 	
 	public Node(BufferedReader bufReader, String username,ServerThread serverThread){
 		this.username = username;
@@ -61,14 +71,14 @@ public class Node {
 	}
 	
     public void handleTask(String sentencePart, char character) {
-        // Count the occurrence of the character in the sentence part
+
         int count = 0;
         for (char c : sentencePart.toCharArray()) {
             if (c == character) {
                 count++;
             }
         }
-        // Send the count back to the leader
+
         pushMessage("{'type': 'result', 'count': " + count + "}");
     }
     
@@ -93,31 +103,57 @@ public class Node {
 		}
 	}
 	
+	
 	/**
 	 * Client waits for user to input can either exit or send a message
+	 * @param input 
 	 */
 	public void askForInput() throws Exception {
+	    
+	    synchronized (this) { 
 		try {
+
+		    /* Only allow once */
+		    if (!(counter > 0)) {
+		     counter++;
+		    String lastLine = null;
 		    
-	        // Hardcoded string and character inputs
-	        //String inputString = "example string for testing";
-	        // char inputChar = 'e';
-	        
+		    
+		    /* Write to input tracker */
+		    try (BufferedReader reader = new BufferedReader(new FileReader("inputTracker.txt"))) {
+		        String line;
+		        while ((line = reader.readLine()) != null) {
+		            lastLine = line;            
+		            inputMessage = lastLine;
+		        }
+		    } catch (IOException e) {
+		        e.printStackTrace();
+		    }
+		    
+		    
+
+		    int newCounter = 0;
+		    
+            if (nodes.size() < 3) {
+                System.out.println("You must have more than 3 nodes connected..");
+            }
 			
-			System.out.println("> You can now start chatting (exit to exit)");
-			while(true) {
+		    /* Processing message */
+			while(lastLine != null &&  !lastLine.isEmpty() && newCounter == 0) {
+			    newCounter++;
+			    String message = lastLine;
 			    
-			    String message = bufferedReader.readLine();
-			    
-	            // Split the message into string and character parts
+	           
 	            String[] parts = message.split(" ");
+	            
+	            
 	            if (parts.length != 2) {
 	                System.out.println("Invalid input format. Please provide a string followed by a character.");
-	                continue; // Skip processing if input format is invalid
+	                continue; 
 	            }
 	            
 	            String inputString = parts[0];
-	            char inputChar = parts[1].charAt(0); // Get the first character of the second part
+	            char inputChar = parts[1].charAt(0); 
 
 		       
 	            List<String> nodeParts = LeaderLogic.splitString(inputString, inputChar);
@@ -130,41 +166,51 @@ public class Node {
 				} else {
 				    int numNodes = nodes.size();
 	                int numMessages = message.length();
-
-	             // Distribute messages equally among connected nodes
-	                int i = 0; // Counter for iterating through the message characters
+	                wordLength = numMessages;
+	                int i = 0; 
+	                
+	              
+	                
+	                /* Split string for sending to designated nodes. */
 	                while (i < numMessages && message.charAt(i) != ' ') {
 	                    for (SocketInfo nodeSocket : nodes) {
-	                        // Output the determined node and message to the console
+	                      
 	                        System.out.println("Message '" + message.charAt(i) + "' would be sent to node: " + nodeSocket.getHost() + ":" + nodeSocket.getPort());
 
-	                        // Simulate sending the message (print the message that would have been sent)
-	                        System.out.println("Simulated message sending: " + message.charAt(i));
 	                        pushMessageToNode("{'type': 'message', 'username': '"+ username +"', 'message': '" + message.charAt(i)  + inputChar + "'}", nodeSocket);
-	                        // Move to the next character in the message
+	                        
 	                        i++;
 
-	                        // If all characters in the message have been distributed, break out of the loop
+	                        
+	                        /* Once done then stop */
 	                        if (i >= numMessages || message.charAt(i) == ' ') {
+	                            int counterValue = ServerTask.updated;
+	                            System.out.println(readLastLineFromFile());
+	                            Thread.sleep(5000); 
+	                            ServerTask.updated = 0;
+	                            System.exit(0);
 	                            break;
 	                        }
+	                        
 	                    }
 	                }
-
-				for (String part : nodeParts) {
-		          //  pushMessage("{'type': 'message', 'username': '"+ username +"', 'message': '" + part + inputChar + "'}");
-		        }
-				
-				//pushMessage("{'type': 'message', 'username': '"+ username +"','message':'" + nodeParts + "'}");
 		             
-				}	
-			}
+				 }	
+				
+				 break;
+
+			   }
+			
+		    }
+		    
 			System.exit(0);
 		
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	  }
 	}
+	
 	
 	/**
      * Send a message to every peer in the peers list, if a peer cannot be reached remove it from list
@@ -173,43 +219,42 @@ public class Node {
      */
     public void pushMessage(String message) {
         try {
-            System.out.println("     Trying to send to peers: " + nodes.size());
+            System.out.println("  Nodes connected: " + nodes.size());
 
-            // Split the nodes set into two halves
             List<SocketInfo> nodeList = new ArrayList<>(nodes);
             List<SocketInfo> firstHalf = nodeList.subList(0, nodeList.size() / 2);
 
             Set<SocketInfo> toRemove = new HashSet<>();
             int counter = 0;
 
-            // Send the entire message to the first half of the nodes
             for (SocketInfo s : firstHalf) {
                 try {
                     Socket socket = new Socket(s.getHost(), s.getPort());
                     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-                    out.println(message); // Send the entire message
+                    out.println(message); 
                     counter++;
                     socket.close();
                 } catch (Exception e) {
-                    // Handle connection errors
+                
                     System.out.println("Could not connect to " + s.getHost() + ":" + s.getPort());
                     toRemove.add(s);
                 }
             }
 
-            // Remove disconnected nodes from the set
+            
             nodes.removeAll(toRemove);
-
-            System.out.println("     Message was sent to " + counter + " peers");
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
     
+    
     public void pushMessageToNode(String message, SocketInfo node) {
+        synchronized (nodes) {
         try {
-            System.out.println("     Trying to send to peers: " + nodes.size());
+            
+            System.out.println("Connected nodes " + nodes.size());
 
 
             Set<SocketInfo> toRemove = new HashSet<>();
@@ -221,24 +266,41 @@ public class Node {
                     out.println(message); // Send the entire message
                     counter++;
                     socket.close();
+
                 } catch (Exception e) {
+                    
                     // Handle connection errors
                     System.out.println("Could not connect to " + node.getHost() + ":" + node.getPort());
                     toRemove.add(node);
                 }
             
-
-            // Remove disconnected nodes from the set
             nodes.removeAll(toRemove);
-
-            System.out.println("     Message was sent to " + counter + " peers");
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+        }
     }
 
-// ####### You can consider moving the two methods below into a separate class to handle communication
+    
+    public int processMessage(String message) {
+
+        if (message.length() < 2) {
+            return 0;
+        }
+        
+        char firstChar = message.charAt(0);
+        char secondChar = message.charAt(1);
+
+        if (Character.toLowerCase(firstChar) == Character.toLowerCase(secondChar)) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+    
+    
+     // ####### You can consider moving the two methods below into a separate class to handle communication
 	// if you like (they would need to be adapted some of course)
 
 
@@ -262,30 +324,51 @@ public class Node {
 					} else {
 						System.out.println("Could not connect to " + leaderSocket.getHost() + ":" + leaderSocket.getPort());
 					}
-					return; // returning since we cannot connect or something goes wrong the rest will not work. 
+					return; 
 				}
 
 				PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-				out.println(message);
+			    out.println(message);
 
 				JSONObject json = new JSONObject(reader.readLine());
 				System.out.println("     Received from server " + json);
 				String list = json.getString("list");
-				updateListenToPeers(list); // when we get a list of all other peers that the leader knows we update them
+				updateListenToPeers(list); 
 
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	
-    private Set<SocketInfo> nodeSet; 
-    private Map<Integer, SocketInfo> nodeMap; 
+
+    public String readLastLineFromFile() {
+        String lastLine = null;
+        int sum = 0;
+        int currentRow = 0;
+        
+        try {
+            Thread.sleep(5000); 
+            try (BufferedReader reader = new BufferedReader(new FileReader("countTracker.txt"))) {
+                String line;
+                while ((line = reader.readLine()) != null && currentRow < wordLength) {
+                    String[] parts = line.split(":");
+                    if (parts.length == 2) {
+                        int count = Integer.parseInt(parts[1].trim());
+                        sum += count;
+                        currentRow++;
+                    }
+                }
+            }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        
+        
+        return String.valueOf(sum);
+    }
     
-
-
-
-
 
 	/**
 	 * Main method saying hi and also starting the Server thread where other peers can subscribe to listen
@@ -321,18 +404,70 @@ public class Node {
 		} else {
 			System.out.println("Node");
 
-			// add leader to list 
+
 			node.addNode(s);
 			node.setLeader(false, s);
 
-			// send message to leader that we want to join
+
 			node.commLeader("{'type': 'join', 'username': '"+ username +"','ip':'" + serverThread.getHost() + "','port':'" + serverThread.getPort() + "'}");
 
 		}
+        
 		serverThread.setPeer(node);
 		serverThread.start();
+		System.out.println("Connecting...Please wait...");
+		Thread.sleep(20000);
+		 
 		node.askForInput();
 
+		  
 	}
+	
+	public static String leaderChecker(String input) throws Exception {
+	    
+	    inputMessage = input;
+
+	    String[] parts = input.split(" ");
+	    if (parts.length != 2) {
+	        throw new IllegalArgumentException("Input format is invalid. Please provide a string followed by a character.");
+	    }
+	    
+	    String mainString = parts[0];
+	    char matchChar = parts[1].charAt(0); 
+
+	    int charCount = 0;
+	    for (int i = 0; i < mainString.length(); i++) {
+	        if (mainString.charAt(i) == matchChar) {
+	            charCount++;
+	        }
+	    }
+	    
+	    return String.valueOf(charCount);
+	}
+	
+
+    public static void sendToLeader(String input) throws Exception {
+        
+        
+      inputMessage = input;
+      System.out.println("message sent by client :" + inputMessage);
+      System.out.println("Processing please wait six seconds...");
+      
+      
+      try {
+      FileWriter fileWriter = new FileWriter("inputTracker.txt", true);
+      BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+
+      bufferedWriter.write(input);
+      bufferedWriter.newLine();
+
+      bufferedWriter.close();
+   
+       } catch (IOException e) {
+           System.out.println("failed :");
+              e.printStackTrace();
+          }
+        
+    }
 	
 }

@@ -57,3 +57,17 @@ task runLeader(type: JavaExec) {
   args leader
   args isLeader
 }
+
+task runClient(type: JavaExec) {
+  description 'Runs node'
+
+  classpath = sourceSets.main.runtimeClasspath
+
+  main = 'Client'
+  standardInput = System.in
+
+  args nodeName
+  args nodes
+  args leader
+  args isLeader
+}

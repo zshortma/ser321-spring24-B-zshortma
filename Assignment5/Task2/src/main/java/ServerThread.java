@@ -19,17 +19,15 @@ public class ServerThread extends Thread{
 	private Node node = null; // throwing in the peer so we can call methods on it
 	
 	public ServerThread(String peer) throws IOException {
-		// peer has host and port, take it appart and save it SocketInfo
+	
 		String[] hostPort = peer.split(":");
 		int port = Integer.valueOf(hostPort[1]);
 		String host = hostPort[0];
 		System.out.println("     host: " + host);
 		socket = new SocketInfo(host, port);
 
-		// create new Socket we listen on
 		serverSocket = new ServerSocket(port);
 
-		// just to check things when running
 		System.out.println("     Listening on: " + host + ":" + port);
 	}
 	
@@ -44,6 +42,7 @@ public class ServerThread extends Thread{
 	public int getPort(){
 		return socket.getPort();
 	}
+	
 	/**
 	 * Starting the thread, we are waiting for clients wanting to talk to us, then create a thread for that client to interact
 	 */
