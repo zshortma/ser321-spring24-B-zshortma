@@ -1,3 +1,6 @@
+# Important
+Please exectute the program as specified below. There is a delay from starting to connecting please give it ~8-10 seconds for things to connect and process. 
+
 # Screencast
 https://drive.google.com/file/d/13EqCl_rehh36lqzkTZrhx24dJ_JENFZH/view?usp=sharing
 
