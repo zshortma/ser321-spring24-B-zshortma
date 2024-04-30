@@ -22,6 +22,7 @@ public class ServerTest {
     private JokeGrpc.JokeBlockingStub blockingStub2;
     private QandaGrpc.QandaBlockingStub blockingStub3;
     private FollowGrpc.FollowBlockingStub blockingStub4;
+    private FlightGrpc.FlightBlockingStub blockingStub5;
 
 
     @org.junit.Before
@@ -33,6 +34,8 @@ public class ServerTest {
         blockingStub2 = JokeGrpc.newBlockingStub(channel);
         blockingStub3 = QandaGrpc.newBlockingStub(channel);
         blockingStub4 = FollowGrpc.newBlockingStub(channel);
+        blockingStub5 = FlightGrpc.newBlockingStub(channel);
+
     }
 
     @org.junit.After
@@ -236,7 +239,55 @@ public class ServerTest {
         assertNotNull(viewFollowingResponse);   
     }
 
+    @Test
+    public void Flight() {
+ 
+        TrackFlightRequest setflightreq = TrackFlightRequest.newBuilder().setFlightNumber("ABC").build();
+        assertEquals(setflightreq.getFlightNumber(), "ABC");
+        
+        TrackFlightRequest addUserRequest = TrackFlightRequest.newBuilder().setFlightNumber("ABC").build();
+        assertNotEquals(addUserRequest.getFlightNumber(), "BBBS");
+        
+        
+        SearchFlightsRequest searchFlightsRequest = SearchFlightsRequest.newBuilder().setOrigin("MCI").build();
+        assertEquals("MCI", searchFlightsRequest.getOrigin());
+        
+        SearchFlightsRequest searchFlightsRequestNotCorrect = SearchFlightsRequest.newBuilder().setOrigin("WML").build();
+        assertNotEquals("MCI", searchFlightsRequestNotCorrect.getOrigin());
+        
+        FlightDetails flightDetails = FlightDetails.newBuilder()
+                .setFlightNumber("ABC123")
+                .setOrigin("MCI")
+                .setDestination("MCO")
+                .setDepartureTime("2024-05-01 08:00")
+                .setArrivalTime("2024-05-01 10:00")
+                .setDurationMinutes(120)
+                .build();
 
+        assertEquals(flightDetails.getFlightNumber(), "ABC123");
+        assertEquals(flightDetails.getOrigin(), "MCI");
+        assertEquals(flightDetails.getDestination(), "MCO");
+        assertEquals(flightDetails.getDepartureTime(), "2024-05-01 08:00");
+        assertEquals(flightDetails.getArrivalTime(), "2024-05-01 10:00");
+        assertEquals(flightDetails.getDurationMinutes(), 120);
+        
+        FlightDetails flightDetails2 = FlightDetails.newBuilder()
+                .setFlightNumber("ABC123")
+                .setOrigin("MCI")
+                .setDestination("MCO")
+                .setDepartureTime("2024-05-01 08:00")
+                .setArrivalTime("2024-05-01 10:00")
+                .setDurationMinutes(1111)
+                .build();
+
+        assertNotEquals(flightDetails2.getFlightNumber(), null);
+        assertNotEquals(flightDetails2.getOrigin(), null);
+        assertNotEquals(flightDetails2.getDestination(), null);
+        assertNotEquals(flightDetails2.getDepartureTime(), null);
+        assertNotEquals(flightDetails2.getArrivalTime(),null);
+        assertNotEquals(flightDetails2.getDurationMinutes(), null);
+        
+    }
 
 
 
